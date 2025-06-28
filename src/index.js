@@ -3,7 +3,7 @@ import fs from 'fs';
 import { Selectors } from './selectors.js';
 
 // parsing del file appsettings
-const raw = fs.readFileSync('./appsettings.json');
+const raw = fs.readFileSync('./settings/appsettings.json');
 const appsettings = JSON.parse(raw);
 
 // funzione per recuperare l'id del comandante 
@@ -109,7 +109,18 @@ function buildEdhPowerLevelUrl(decklistString) {
 
 // funzione con puppeteer per chiamare un certo url per edhpowerlevel e leggere la power del mazzo
 async function analyzeDeckEDHPowerLevel(urlToCall) {
-   const browser = await launch({ headless: 'new' });
+    const browser = await launch({
+        headless: 'new',                         // 100 % headless
+        args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',             // evita crash per /dev/shm piccolo
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
+        '--ozone-platform=headless'            // niente X/Wayland
+        ],
+    });
    const page = await browser.newPage();
 
    try {
@@ -131,8 +142,16 @@ async function analyzeDeckEDHCardsRealm(cards) {
     const url = `${appsettings.cardsRealm.baseUrl}`;
 
     const browser = await launch({
-        headless: true, // false -> apre chromium
-        args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argomenti standard per compatibilità
+        headless: 'new',                         // 100 % headless
+        args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',             // evita crash per /dev/shm piccolo
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
+        '--ozone-platform=headless'            // niente X/Wayland
+        ],
     });
 
     const page = await browser.newPage();
