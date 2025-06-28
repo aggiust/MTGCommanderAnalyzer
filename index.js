@@ -19,7 +19,6 @@ async function getDecksMoxfield(commanderCardId, numberOfDecks, sortType) {
   const deckIds =  []; // array con id dei deck (moxfield)
 
   const url = `${appsettings.moxfield.getDecksPart1}${numberOfDecks}${appsettings.moxfield.getDecksPart2}${sortType}${appsettings.moxfield.getDecksPart3}${commanderCardId}`;
-  console.log(url)
   const res = await fetch(url);
   const data = await res.json();
 
@@ -57,7 +56,7 @@ async function getDeckDetailsMoxfield(deckId, cardsStatsArray) {
               const quantity = cardDetails.quantity;
 
               let price = 0; // Default a 0 se il prezzo non è disponibile
-              if (cardDetails.card && cardDetails.card.prices && cardDetails.card.prices.eur !== undefined) {
+              if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
                   price = cardDetails.card.prices.eur;
               }
               const cardObject = {
@@ -147,7 +146,21 @@ async function analyzeDeckEDHCardsRealm(cards) {
         await page.click(Selectors.cardsRealmAcceptCookie);
         await page.waitForSelector(Selectors.cardsRealmInputBox, { timeout: 10000 }); // Attende che l'input sia presente
         await page.click(Selectors.cardsRealmInputBox);
-        await page.type(Selectors.cardsRealmInputBox, cards, { delay: 5 });  // Inserisco la lista delle carte
+
+        // La callback di page.$eval() gira dentro la pagina: al suo interno esistono solo i parametri che le passi esplicitamente, non le variabili del tuo script Node.
+        // Inoltre, se l’app usa React/Vue/Angular o ha listener sull’input, limitarsi a cambiare el.value potrebbe non attivare la logica di binding; conviene quindi emettere anche l’evento input (o change).
+
+        await page.$eval(
+            Selectors.cardsRealmInputBox,       // "#inputMain"
+            (el, value) => {
+              el.value = value;                 // imposta il testo
+              el.dispatchEvent(                 // notifica l’app
+                new Event('input', { bubbles: true })
+              );
+            },
+            cards                               // <-- parametro passato al browser
+          );
+        //await page.type(Selectors.cardsRealmInputBox, cards, { delay: 0 });  // Inserisco la lista delle carte
 
         await page.click(Selectors.cardsRealmAnalyzeBtn); // Clicca sul pulsante di calcolo
 
@@ -223,15 +236,14 @@ async function main() {
     // interrogazione di edhpowerlevel.com e cardsrealm per la valutazione dei deck
     for (let i = 0; i < decklistArray.length; i++) {
         const urlToCall = buildEdhPowerLevelUrl(decklistArray[i], i);
-        console.log(urlToCall);
+        console.log(`[DECK #${i+1}]`);
         const resultEdhPowerLevel = await analyzeDeckEDHPowerLevel(urlToCall);
         const resultEdhCardsRealm = await analyzeDeckEDHCardsRealm(decklistArray[i]);
         
-        const deckPrice = cardsStatsArray[i].reduce((acc, x) => acc + x.price, 0); // dove acc è l'accumulatore e 0 è l'initial value
+        const deckPrice = cardsStatsArray[i].reduce((acc, x) => acc + parseFloat(x.price || 0), 0); // dove acc è l'accumulatore e 0 è l'initial value
 
         const o = {
             url: `${appsettings.moxfield.decks}${decks[i]}`,
-            list: decklistArray[i],
             edhpl: resultEdhPowerLevel,
             cardsrealmpl: resultEdhCardsRealm,
             price: parseFloat(deckPrice).toFixed(2)
