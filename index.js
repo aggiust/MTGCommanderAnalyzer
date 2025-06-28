@@ -1,5 +1,6 @@
 import { launch } from 'puppeteer';
 import fs from 'fs';
+import * as XLSX from 'xlsx';
 import { Selectors } from './selectors.js';
 
 // parsing del file appsettings
@@ -244,8 +245,8 @@ async function main() {
 
         const o = {
             url: `${appsettings.moxfield.decks}${decks[i]}`,
-            edhpl: resultEdhPowerLevel,
-            cardsrealmpl: resultEdhCardsRealm,
+            edhpl: resultEdhPowerLevel ?? "No data",
+            cardsrealmpl: resultEdhCardsRealm ?? "No data",
             price: parseFloat(deckPrice).toFixed(2)
         }
 
@@ -253,6 +254,19 @@ async function main() {
     }
 
     console.log("resultArray: ", resultArray);
+
+    const sorted = [...resultArray]
+      .map(r => ({ ...r, _p: Number(r.price) }))       // _p = prezzo numerico
+      .sort((a, b) => (isNaN(a._p) ? 1 : isNaN(b._p) ? -1 : a._p - b._p))
+      .map(({ _p, ...r }) => ({ ...r, price: isNaN(_p) ? '' : _p })); // ripulisce
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(sorted);
+    XLSX.utils.book_append_sheet(wb, ws, 'Decks');
+
+    // Scrive il file localmente
+    XLSX.writeFile(wb, `results/decks_${commanderName}.xlsx`, { bookType: 'xlsx' });
+    console.log('Creato decks_sorted.xlsx nella cartella corrente');
  }
 
 main().catch(err => console.error('Errore:', err));

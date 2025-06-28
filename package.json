@@ -10,6 +10,7 @@
   "author": "aggiusti",
   "license": "ISC",
   "dependencies": {
-    "puppeteer": "^24.10.2"
+    "puppeteer": "^24.10.2",
+    "xlsx": "^0.18.5"
   }
 }
