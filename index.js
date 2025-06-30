@@ -18,19 +18,25 @@ async function getCommanderIdMoxfield(name) {
 // funzione per recuperare la lista dei deck con quello specifico comandante
 async function getDecksMoxfield(commanderCardId, numberOfDecks, sortType, dateGreaterThan = undefined) {
   const deckIds =  []; // array con id dei deck (moxfield)
+  const moreDeckStats = []; // array che conterrà stats aggiuntive del mazzo
 
   const url = `${appsettings.moxfield.getDecksPart1}${numberOfDecks}${appsettings.moxfield.getDecksPart2}${sortType}${appsettings.moxfield.getDecksPart3}${commanderCardId}`;
   const res = await fetch(url);
   const decks = await res.json();
 
   decks.data.forEach(element => {
-    if(dateGreaterThan == undefined)
+    if(dateGreaterThan == undefined){
       deckIds.push(element.publicId);
-    else if(dateGreaterThan != undefined && new Date(element.lastUpdatedAtUtc) >= new Date(dateGreaterThan))
+      moreDeckStats.push({likes: element.likeCount, views: element.viewCount, name: element.name, updatedAt: element.lastUpdatedAtUtc, createdAt: element.createdAtUtc})
+    }
+    else if(dateGreaterThan != undefined && new Date(element.lastUpdatedAtUtc) >= new Date(dateGreaterThan)){
       deckIds.push(element.publicId);
+      moreDeckStats.push({likes: element.likeCount, views: element.viewCount, name: element.name, updatedAt: element.lastUpdatedAtUtc, createdAt: element.createdAtUtc})
+    }
   });
 
-  return deckIds;
+  const deckInfo = {deckIds : deckIds, moreDeckStats: moreDeckStats}
+  return deckInfo;
 }
 
 function populateDecklist(cardName, cardDetails, supportingArray){
@@ -64,50 +70,20 @@ async function getDeckDetailsMoxfield(deckId, cardsStatsArray) {
     for( const cardName in data.commanders){
       if(Object.prototype.hasOwnProperty.call(data.commanders, cardName)){
           const cardDetails = data.commanders[cardName];
-
-          const quantity = cardDetails.quantity;
-
-          let price = 0; // Default a 0 se il prezzo non è disponibile
-          if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
-              price = cardDetails.card.prices.eur;
-          } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
-              price = cardDetails.card.prices.eur_foil;
-          }
-
-          const cardObject = {
-              name: cardName, 
-              price: price,
-              qty: quantity
-          };
-          supportingArray.push(cardObject);
+          populateDecklist(cardName, cardDetails, supportingArray);
        }
     }
   }
 
-
-  if (data.companions){
-    for( const cardName in data.companions){
-      if(Object.prototype.hasOwnProperty.call(data.companions, cardName)){
-          const cardDetails = data.comapanions[cardName];
-
-          const quantity = cardDetails.quantity;
-
-          let price = 0; // Default a 0 se il prezzo non è disponibile
-          if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
-              price = cardDetails.card.prices.eur;
-          } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
-              price = cardDetails.card.prices.eur_foil;
-          }
-
-          const cardObject = {
-              name: cardName, 
-              price: price,
-              qty: quantity
-          };
-          supportingArray.push(cardObject);
-       }
-    }
-  }
+  // valutazione companion?
+  // if (data.companions){
+  //   for( const cardName in data.companions){
+  //     if(Object.prototype.hasOwnProperty.call(data.companions, cardName)){
+  //         const cardDetails = data.comapanions[cardName];
+  //         populateDecklist(cardName, cardDetails, supportingArray);
+  //      }
+  //   }
+  // }
 
   // 1. Recupera le informazioni delle carte nel "mainboard"
   if (data.mainboard) {
@@ -116,22 +92,7 @@ async function getDeckDetailsMoxfield(deckId, cardsStatsArray) {
           // Assicurati che 'cardName' sia una proprietà diretta dell'oggetto e non del prototipo
           if (Object.prototype.hasOwnProperty.call(data.mainboard, cardName)) {
               const cardDetails = data.mainboard[cardName];
-
-              const quantity = cardDetails.quantity;
-
-              let price = 0; // Default a 0 se il prezzo non è disponibile
-              if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
-                  price = cardDetails.card.prices.eur;
-              } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
-                  price = cardDetails.card.prices.eur_foil;
-              }
-
-              const cardObject = {
-                  name: cardName, 
-                  price: price,
-                  qty: quantity
-              };
-              supportingArray.push(cardObject);
+              populateDecklist(cardName, cardDetails, supportingArray);
           }
       }
   }
@@ -288,7 +249,9 @@ async function main() {
 
     // recupero i deck
     console.log(`2. Recupero mazzi per commanderId = ${commanderId}`);
-    const decks = await getDecksMoxfield(commanderId, numberOfDecks, sortType, dateGreaterThan);
+    const decksStats = await getDecksMoxfield(commanderId, numberOfDecks, sortType, dateGreaterThan);
+    const decks = decksStats.deckIds;
+    const moreStats = decksStats.moreDeckStats;
 
     console.log(`3. Creo le decklist`);
     // per ogni deck recuperato allo step precedente, recupero i dettagli. Gli passo anche l'array da popolare
@@ -312,8 +275,13 @@ async function main() {
 
         const o = {
             url: `${appsettings.moxfield.decks}${decks[i]}`,
-            edhpl: resultEdhPowerLevel ?? "No data",
-            cardsrealmpl: resultEdhCardsRealm ?? "No data",
+            name: moreStats[i].name,
+            likes: moreStats[i].likes,
+            views: moreStats[i].views,
+            createdAt: moreStats[i].createdAt,
+            updatedAt: moreStats[i].updatedAt,
+            powerlevel_edhpl: resultEdhPowerLevel ?? "No data",
+            powerlevel_cardsrealm: resultEdhCardsRealm ?? "No data",
             price: parseFloat(deckPrice).toFixed(2)
         }
 
