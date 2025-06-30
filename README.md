@@ -1,8 +1,7 @@
 TODO:
 
-Filtro dei mazzi per prezzo/data
-Gestione dei background (dei commander)
-Aggiunta archidekt
-Contaneirizzare la app
-Test su pc windows
-Test su android
+2) Gestione dei background (dei commander)
+3) Aggiunta archidekt
+4) Contaneirizzare la app
+5) Test su pc windows
+6) Test su android

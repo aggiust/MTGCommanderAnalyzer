@@ -16,18 +16,39 @@ async function getCommanderIdMoxfield(name) {
 }
 
 // funzione per recuperare la lista dei deck con quello specifico comandante
-async function getDecksMoxfield(commanderCardId, numberOfDecks, sortType) {
+async function getDecksMoxfield(commanderCardId, numberOfDecks, sortType, dateGreaterThan = undefined) {
   const deckIds =  []; // array con id dei deck (moxfield)
 
   const url = `${appsettings.moxfield.getDecksPart1}${numberOfDecks}${appsettings.moxfield.getDecksPart2}${sortType}${appsettings.moxfield.getDecksPart3}${commanderCardId}`;
   const res = await fetch(url);
-  const data = await res.json();
+  const decks = await res.json();
 
-  data.data.forEach(element => {
-    deckIds.push(element.publicId);
+  decks.data.forEach(element => {
+    if(dateGreaterThan == undefined)
+      deckIds.push(element.publicId);
+    else if(dateGreaterThan != undefined && new Date(element.lastUpdatedAtUtc) >= new Date(dateGreaterThan))
+      deckIds.push(element.publicId);
   });
 
   return deckIds;
+}
+
+function populateDecklist(cardName, cardDetails, supportingArray){
+  const quantity = cardDetails.quantity;
+
+  let price = 0; // Default a 0 se il prezzo non è disponibile
+  if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
+      price = cardDetails.card.prices.eur;
+  } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
+      price = cardDetails.card.prices.eur_foil;
+  }
+
+  const cardObject = {
+      name: cardName, 
+      price: price,
+      qty: quantity
+  };
+  supportingArray.push(cardObject);
 }
 
 // recupero la lista specifica di un mazzo
@@ -37,14 +58,56 @@ async function getDeckDetailsMoxfield(deckId, cardsStatsArray) {
   const res = await fetch(url);
   const data = await res.json();
 
-  const o = {
-    name: data.main.name,
-    price: data.main.prices.eur,
-    qty: 1
+  const supportingArray = [];
+
+  if (data.commanders){
+    for( const cardName in data.commanders){
+      if(Object.prototype.hasOwnProperty.call(data.commanders, cardName)){
+          const cardDetails = data.commanders[cardName];
+
+          const quantity = cardDetails.quantity;
+
+          let price = 0; // Default a 0 se il prezzo non è disponibile
+          if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
+              price = cardDetails.card.prices.eur;
+          } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
+              price = cardDetails.card.prices.eur_foil;
+          }
+
+          const cardObject = {
+              name: cardName, 
+              price: price,
+              qty: quantity
+          };
+          supportingArray.push(cardObject);
+       }
+    }
   }
 
-  const supportingArray = [];
-  supportingArray.push(o);
+
+  if (data.companions){
+    for( const cardName in data.companions){
+      if(Object.prototype.hasOwnProperty.call(data.companions, cardName)){
+          const cardDetails = data.comapanions[cardName];
+
+          const quantity = cardDetails.quantity;
+
+          let price = 0; // Default a 0 se il prezzo non è disponibile
+          if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
+              price = cardDetails.card.prices.eur;
+          } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
+              price = cardDetails.card.prices.eur_foil;
+          }
+
+          const cardObject = {
+              name: cardName, 
+              price: price,
+              qty: quantity
+          };
+          supportingArray.push(cardObject);
+       }
+    }
+  }
 
   // 1. Recupera le informazioni delle carte nel "mainboard"
   if (data.mainboard) {
@@ -59,7 +122,10 @@ async function getDeckDetailsMoxfield(deckId, cardsStatsArray) {
               let price = 0; // Default a 0 se il prezzo non è disponibile
               if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur != undefined || cardDetails.card.prices.eur != null)) {
                   price = cardDetails.card.prices.eur;
+              } else if (cardDetails.card && cardDetails.card.prices && (cardDetails.card.prices.eur_foil != undefined || cardDetails.card.prices.eur_foil != null)){
+                  price = cardDetails.card.prices.eur_foil;
               }
+
               const cardObject = {
                   name: cardName, 
                   price: price,
@@ -206,6 +272,7 @@ async function main() {
     const commanderName = process.argv[2];
     const numberOfDecks = process.argv[3];
     let sortType = process.argv[4];
+    const dateGreaterThan = process.argv[5];
 
     if(sortType == '1')
         sortType = "views";
@@ -221,7 +288,7 @@ async function main() {
 
     // recupero i deck
     console.log(`2. Recupero mazzi per commanderId = ${commanderId}`);
-    const decks = await getDecksMoxfield(commanderId, numberOfDecks, sortType);
+    const decks = await getDecksMoxfield(commanderId, numberOfDecks, sortType, dateGreaterThan);
 
     console.log(`3. Creo le decklist`);
     // per ogni deck recuperato allo step precedente, recupero i dettagli. Gli passo anche l'array da popolare
