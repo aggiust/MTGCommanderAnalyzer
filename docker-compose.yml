@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: node-app
+    volumes:
+      - ./results:/app/results
+    # Se vuoi vedere i log in tempo reale
+    tty: true

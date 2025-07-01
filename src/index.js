@@ -143,8 +143,6 @@ async function analyzeDeckEDHPowerLevel(urlToCall) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',             // evita crash per /dev/shm piccolo
         '--disable-gpu',
-        '--single-process',
-        '--no-zygote',
         '--ozone-platform=headless'            // niente X/Wayland
         ],
     });
@@ -175,8 +173,6 @@ async function analyzeDeckEDHCardsRealm(cards) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',             // evita crash per /dev/shm piccolo
         '--disable-gpu',
-        '--single-process',
-        '--no-zygote',
         '--ozone-platform=headless'            // niente X/Wayland
         ],
     });
@@ -187,10 +183,16 @@ async function analyzeDeckEDHCardsRealm(cards) {
 
     try {
         console.log('🌐 cardsrealm.com');
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 }); // Aumenta il timeout per il goto
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }); // Aumenta il timeout per il goto
 
         // accetto i cookie di tracciamento
-        await page.click(Selectors.cardsRealmAcceptCookie);
+        try {
+          await page.click(Selectors.cardsRealmAcceptCookie, { timeout: 5000 });
+          console.log('Click cookie riuscito');
+        } catch (err) {
+          console.log('Nessun cookie da cliccare, passo avanti');
+        }
+
         await page.waitForSelector(Selectors.cardsRealmInputBox, { timeout: 10000 }); // Attende che l'input sia presente
         await page.click(Selectors.cardsRealmInputBox);
 
@@ -214,21 +216,24 @@ async function analyzeDeckEDHCardsRealm(cards) {
         // page.waitForFunction(...) richiama automaticamente e periodicamente la funzione che gli passi, fino a quando:
         // 1) la funzione restituisce un valore "truthy" (qualcosa di diverso da false, null, undefined, 0, "", ecc.),
         // 2) oppure scade il timeout specificato.
-        const powerLevelResultHandle = await page.waitForFunction(() => {
-            const powerLevelElement = document.getElementById('power_level'); // recupero il powerlevel
-            if (powerLevelElement) {
-                const currentText = powerLevelElement.textContent.trim();
-                const currentValue = parseInt(currentText); // Prova a convertirlo in numero
+        const powerLevelResultHandle = await page.waitForFunction(
+                  () => {
+                    try {
+                      const el = document.getElementById('power_level');
+                      if (!el) return false;
 
-                // La condizione: il testo non è "1", non è vuoto, e convertibile a un numero valido diverso da 1
-                if (currentText != '0' && currentText != '1' && currentText !== '' && !isNaN(currentValue)) {
-                    return currentText; // Restituisce il testo aggiornato
-                }
-            }
-            return false; // Continua ad aspettare
-        }, {
-            timeout: 60000 // Timeout generoso di 60 secondi per il calcolo
-        });
+                      const text = el.textContent.trim();
+                      const num = parseInt(text);
+
+                      return text !== '' && text !== '0' && text !== '1' && !isNaN(num) && num > 1
+                        ? text
+                        : false;
+                    } catch {
+                      return false;
+                    }
+                  },
+                  { timeout: 60000 }
+                );
 
         // Una volta che waitForFunction ha successo, estrai il valore
         const result = await powerLevelResultHandle.jsonValue();
@@ -320,7 +325,6 @@ async function main() {
 
     // Scrive il file localmente
     XLSX.writeFile(wb, `results/decks_${commanderName}.xlsx`, { bookType: 'xlsx' });
-    console.log('Creato decks_sorted.xlsx nella cartella corrente');
  }
 
 main().catch(err => console.error('Errore:', err));
