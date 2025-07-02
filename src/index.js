@@ -217,23 +217,23 @@ async function analyzeDeckEDHCardsRealm(cards) {
         // 1) la funzione restituisce un valore "truthy" (qualcosa di diverso da false, null, undefined, 0, "", ecc.),
         // 2) oppure scade il timeout specificato.
         const powerLevelResultHandle = await page.waitForFunction(
-                  () => {
-                    try {
-                      const el = document.getElementById('power_level');
-                      if (!el) return false;
+          () => {
+            try {
+              const el = document.getElementById('power_level');
+              if (!el) return false;
 
-                      const text = el.textContent.trim();
-                      const num = parseInt(text);
+              const text = el.textContent.trim();
+              const num = parseInt(text);
 
-                      return text !== '' && text !== '0' && text !== '1' && !isNaN(num) && num > 1
-                        ? text
-                        : false;
-                    } catch {
-                      return false;
-                    }
-                  },
-                  { timeout: 60000 }
-                );
+              return text !== '' && text !== '0' && text !== '1' && !isNaN(num) && num > 1
+                ? text
+                : false;
+            } catch {
+              return false;
+            }
+          },
+          { timeout: 60000 }
+         );
 
         // Una volta che waitForFunction ha successo, estrai il valore
         const result = await powerLevelResultHandle.jsonValue();
