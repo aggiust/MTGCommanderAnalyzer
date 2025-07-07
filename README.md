@@ -1,8 +1,7 @@
 TODO:
-1) Aggiunta archidekt : https://archidekt.com/_next/data/VCCAZuNu68DIIOVwXsTqa/search/decks.json?commanderName=patron+of+the+moon&deckFormat=3&orderBy=-updatedAt&page=1
-2) pubblicare su dockerhub
-3) Test su pc windows
-4) Test su android
+1) pubblicare su dockerhub
+2) Test su pc windows
+3) Test su android
 
 
 comandi per container:
