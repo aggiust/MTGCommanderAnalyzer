@@ -1,8 +1,7 @@
 TODO:
 1) Aggiunta archidekt : https://archidekt.com/_next/data/VCCAZuNu68DIIOVwXsTqa/search/decks.json?commanderName=patron+of+the+moon&deckFormat=3&orderBy=-updatedAt&page=1
-2) Contaneirizzare la app
-3) Test su pc windows
-4) Test su android
+2) Test su pc windows
+3) Test su android
 
 
 comandi per container:
@@ -60,3 +59,6 @@ Devi per forza:
 1) docker compose up -d
 2) docker exec -it node-app sh
 3) node src/index.js "Patron of the Moon" 1 1
+
+
+Adesso è possibile pushare l'immagine su docker hub. Scaricarla da un altro dispositivo e runnarla con docker run <nome_img> "Patron of the Moon" 2 2

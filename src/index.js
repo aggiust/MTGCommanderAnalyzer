@@ -154,7 +154,35 @@ async function analyzeDeckEDHPowerLevel(urlToCall) {
      await page.goto(urlToCall, { waitUntil: 'networkidle2' });
      await page.waitForSelector(Selectors.edhPowerlevelResult, { timeout: 15000 });
 
-     return await page.$eval(Selectors.edhPowerlevelResult, el => el.textContent.trim());
+     // recupero del bracket:
+    const bracket = await page.evaluate(() => {
+      const container = document.querySelector(
+        '#edh-power-level > main > div > div.row.mt-5 > div.results-wrap.col-12 > div.row.framed-bottom > div > div.row.m-0.mx-lg-3'
+      );
+
+      if (!container) return null;
+
+      // Seleziona SOLO i div figli diretti (o come preferisci)
+      const divs = Array.from(container.querySelectorAll('div'));
+
+      const targetDiv = divs.find(div =>
+        div.classList.contains('ok') && div.classList.contains('recommended')
+      );
+
+      const strong = targetDiv.querySelector('div > strong');
+      const lvl = strong ? strong.innerText.trim() : null;
+
+      console.log('il lvl del mazzo è:', lvl);
+
+      return lvl;
+    });
+
+    const pl = await page.$eval(Selectors.edhPowerlevelResult, el => el.textContent.trim());
+
+    return {
+      bracket: bracket,
+      powerlevel: pl,
+    }
    } catch (err) {
      console.error(`Errore:`, err.message);
      return null;
@@ -304,8 +332,9 @@ async function main() {
             views: moreStats[i].views,
             createdAt: moreStats[i].createdAt,
             updatedAt: moreStats[i].updatedAt,
-            powerlevel_edhpl: resultEdhPowerLevel ?? "No data",
+            powerlevel_edhpl: resultEdhPowerLevel.powerlevel ?? "No data",
             powerlevel_cardsrealm: resultEdhCardsRealm ?? "No data",
+            bracket: resultEdhPowerLevel.bracket ?? "No data",
             price: parseFloat(deckPrice).toFixed(2)
         }
 
@@ -324,7 +353,7 @@ async function main() {
     XLSX.utils.book_append_sheet(wb, ws, 'Decks');
 
     // Scrive il file localmente
-    XLSX.writeFile(wb, `results/decks_${commanderName}.xlsx`, { bookType: 'xlsx' });
+    XLSX.writeFile(wb, `results/decks_${commanderId}.xlsx`, { bookType: 'xlsx' });
  }
 
 main().catch(err => console.error('Errore:', err));
