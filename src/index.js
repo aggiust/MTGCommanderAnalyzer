@@ -332,9 +332,9 @@ async function main() {
             views: moreStats[i].views,
             createdAt: moreStats[i].createdAt,
             updatedAt: moreStats[i].updatedAt,
-            powerlevel_edhpl: resultEdhPowerLevel.powerlevel ?? "No data",
+            powerlevel_edhpl: resultEdhPowerLevel?.powerlevel ?? "No data",
             powerlevel_cardsrealm: resultEdhCardsRealm ?? "No data",
-            bracket: resultEdhPowerLevel.bracket ?? "No data",
+            bracket: resultEdhPowerLevel?.bracket ?? "No data",
             price: parseFloat(deckPrice).toFixed(2)
         }
 
