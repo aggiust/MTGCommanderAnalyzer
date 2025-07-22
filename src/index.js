@@ -12,7 +12,15 @@ async function getCommanderIdMoxfield(name) {
   const url = `${appsettings.moxfield.getCommanderId}${encodeURIComponent(name)}`;
   const res = await fetch(url);
   const data = await res.json();
-  return data.data?.[0]?.id;
+
+  let id = "";
+
+  data.data?.forEach(element => {
+    if(element.name.toLowerCase() == name.toLowerCase())
+      id = element.id
+  })
+
+  return id;
 }
 
 // funzione per recuperare la lista dei deck con quello specifico comandante
@@ -294,6 +302,9 @@ async function main() {
     console.log(`1. Cerco commander "${commanderName}"`);
     // recupero l'id del commander per moxfield
     const commanderId = await getCommanderIdMoxfield(commanderName);
+
+    console.log('cid', commanderId);
+
     if (!commanderId) {
         console.error('Commander non trovato');
         return;
